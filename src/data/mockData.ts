@@ -33,7 +33,7 @@ export const MUSIC_LIBRARY: Music[] = [
     id: "crave-you",
     title: "Crave You",
     artist: "LIBR4 ft. SLXME",
-    coverUrl: "https://raw.githubusercontent.com/kumakiryu/musics-formikaelson/main/assets/CRAVE_YOU.png",
+    coverUrl: "https://kumakiryu.github.io/musics-formikaelson/assets/CRAVE_YOU.png",
     accentColor: "#c084fc",
     labelColor: "#7e22ce",
     tracks: [
