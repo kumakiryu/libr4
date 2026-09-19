@@ -6,7 +6,7 @@ import { useVisitors } from "../hooks/useVisitors";
 
 const SOCIALS = [
   { icon: Play, label: "YouTube", href: "https://youtube.com/@LIBR4xx" },
-  { icon: AtSign, label: "Tiktok", href: "https://x.com" },
+  { icon: AtSign, label: "Tiktok", href: "https://www.tiktok.com/@defnotlibr4" },
   { icon: Globe, label: "Website", href: "https://libr4.xyz" },
 ];
 
