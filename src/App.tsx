@@ -81,7 +81,7 @@ export default function App() {
         className="fixed inset-0 w-full h-full object-cover pointer-events-none"
         style={{ zIndex: 0 }}
       >
-        <source src="/bg.mp4" type="video/mp4" />
+        <source src="https://kumakiryu.github.io/musics-formikaelson/assets/iwxsbg.mp4" type="video/mp4" />
       </video>
 
       {/* Dark scrim for readability */}
