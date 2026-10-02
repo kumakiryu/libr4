@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { ArrowRight, Volume2 } from "lucide-react";
 import { MUSIC_LIBRARY, ALBUM_LIBRARY } from "./data/mockData";
 import type { Music } from "./data/mockData";
 import { usePlayer } from "./hooks/usePlayer";
@@ -24,6 +25,7 @@ export default function App() {
   const [addingFor, setAddingFor]   = useState<"single" | "album" | null>(null);
   const [authGate,  setAuthGate]    = useState<AddTarget | null>(null);
   const [isOwner,   setIsOwner]     = useState(() => isAuthenticated());
+  const [showSplash, setShowSplash] = useState(true);
   const [pendingBackground, setPendingBackground] = useState<{
     music: Music;
     trackIndex: number;
@@ -76,6 +78,15 @@ export default function App() {
       document.removeEventListener("keydown", resume);
     };
   }, [state.autoplayBlocked, player.retryAutoplay]);
+
+  useEffect(() => {
+    if (!showSplash) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showSplash]);
 
   const requestAdd = useCallback((type: "single" | "album") => {
     if (isAuthenticated()) setAddingFor(type);
@@ -171,6 +182,45 @@ export default function App() {
         className="fixed inset-0 pointer-events-none"
         style={{ zIndex: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.50) 50%, rgba(0,0,0,0.75) 100%)" }}
       />
+
+      {/* Sound splash — the entry click satisfies browser audio policies. */}
+      {showSplash && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-black/45 px-6 backdrop-blur-md">
+          <div className="splash-glow pointer-events-none absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full" />
+          <div className="relative flex max-w-md flex-col items-center text-center animate-fade-in-up">
+            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-white/15 bg-white/[0.08] shadow-2xl backdrop-blur-2xl">
+              <Volume2 size={24} className="text-white/85" />
+            </div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.45em] text-white/35">
+              Official profile
+            </div>
+            <div className="mt-3 text-5xl font-black tracking-[-0.06em] text-white sm:text-6xl">
+              LIBR4
+            </div>
+            <div className="mt-4 text-sm leading-relaxed text-white/45">
+              For the ones who feel too much
+            </div>
+            <button
+              type="button"
+              disabled={!state.track}
+              onClick={() => {
+                player.retryAutoplay();
+                setShowSplash(false);
+              }}
+              className="group mt-9 flex min-w-52 items-center justify-center gap-3 rounded-full border border-white/20 bg-white/[0.12] px-7 py-3.5 text-sm font-semibold text-white shadow-2xl backdrop-blur-2xl transition-all hover:scale-[1.03] hover:bg-white/[0.2] active:scale-[0.98] disabled:cursor-wait disabled:opacity-45"
+            >
+              {state.track ? "Enter" : "Loading music"}
+              <ArrowRight
+                size={16}
+                className="transition-transform group-hover:translate-x-0.5"
+              />
+            </button>
+            <div className="mt-4 text-[10px] uppercase tracking-widest text-white/20">
+              Press the enter button
+            </div>
+          </div>
+        </div>
+      )}
 
       <div
         className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10 space-y-8"

@@ -133,6 +133,16 @@ html, body, #root {
 .animate-slide-up       { animation: slide-up 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 .animate-status-pulse   { animation: status-pulse 2.4s ease-in-out infinite; }
 
+.splash-glow {
+  background: radial-gradient(
+    circle,
+    rgba(244, 114, 182, 0.3) 0%,
+    rgba(139, 92, 246, 0.18) 42%,
+    transparent 72%
+  );
+  filter: blur(18px);
+}
+
 /* Native ranges preserve keyboard and drag support across mouse and touch. */
 .player-range {
   height: 14px;
