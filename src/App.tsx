@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { MUSIC_LIBRARY, ALBUM_LIBRARY } from "./data/mockData";
 import type { Music } from "./data/mockData";
 import { usePlayer } from "./hooks/usePlayer";
@@ -10,6 +10,10 @@ import MiniPlayer from "./components/MiniPlayer";
 import AddMusicPanel from "./components/AddMusicPanel";
 import PasswordModal from "./components/PasswordModal";
 import { isAuthenticated, setAuthenticated as markAuth } from "./lib/adminAuth";
+import * as musicApi from "./lib/musicApi";
+
+const BACKGROUND_MUSIC_KEY = "libr4_background_music";
+type AddTarget = "single" | "album" | "background";
 
 export default function App() {
   const player = usePlayer();
@@ -18,17 +22,95 @@ export default function App() {
   const lib = useLocalMusic(MUSIC_LIBRARY, ALBUM_LIBRARY);
 
   const [addingFor, setAddingFor]   = useState<"single" | "album" | null>(null);
-  const [authGate,  setAuthGate]    = useState<"single" | "album" | null>(null);
+  const [authGate,  setAuthGate]    = useState<AddTarget | null>(null);
   const [isOwner,   setIsOwner]     = useState(() => isAuthenticated());
+  const [pendingBackground, setPendingBackground] = useState<{
+    music: Music;
+    trackIndex: number;
+  } | null>(null);
+
+  // Start the visitor's chosen background track, falling back to the first
+  // single. Browsers may require one interaction before allowing sound.
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBackgroundMusic = async () => {
+      let saved = await musicApi.fetchBackgroundMusic().catch(() => null);
+
+      if (!saved) {
+        try {
+          saved = JSON.parse(localStorage.getItem(BACKGROUND_MUSIC_KEY) || "null");
+        } catch {
+          // Ignore invalid or old local preferences.
+        }
+      }
+
+      const music = saved?.music ?? MUSIC_LIBRARY[0];
+      const trackIndex = saved?.trackIndex ?? 0;
+      if (!cancelled && music?.tracks[trackIndex]) {
+        player.selectTrack(music, trackIndex);
+      }
+    };
+
+    void loadBackgroundMusic();
+    return () => {
+      cancelled = true;
+    };
+  }, [player.selectTrack]);
+
+  useEffect(() => {
+    if (!state.autoplayBlocked) return;
+
+    const resume = (event: PointerEvent | KeyboardEvent) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest("button, input, a")
+      ) return;
+      player.retryAutoplay();
+    };
+
+    document.addEventListener("pointerdown", resume);
+    document.addEventListener("keydown", resume);
+    return () => {
+      document.removeEventListener("pointerdown", resume);
+      document.removeEventListener("keydown", resume);
+    };
+  }, [state.autoplayBlocked, player.retryAutoplay]);
 
   const requestAdd = useCallback((type: "single" | "album") => {
     if (isAuthenticated()) setAddingFor(type);
     else setAuthGate(type);
   }, []);
 
+  const selectBackgroundTrack = useCallback((music: Music, trackIndex: number) => {
+    localStorage.setItem(
+      BACKGROUND_MUSIC_KEY,
+      JSON.stringify({ music, trackIndex }),
+    );
+    player.selectTrack(music, trackIndex);
+  }, [player.selectTrack]);
+
+  const saveGlobalBackground = useCallback(async (music: Music, trackIndex: number) => {
+    selectBackgroundTrack(music, trackIndex);
+    try {
+      await musicApi.setBackgroundMusic({ music, trackIndex });
+    } catch (error) {
+      console.error(error);
+    }
+  }, [selectBackgroundTrack]);
+
+  const requestGlobalBackground = useCallback((music: Music, trackIndex: number) => {
+    if (isAuthenticated()) {
+      void saveGlobalBackground(music, trackIndex);
+    } else {
+      setPendingBackground({ music, trackIndex });
+      setAuthGate("background");
+    }
+  }, [saveGlobalBackground]);
+
   const handleMusicClick = useCallback((music: Music) => {
-    player.selectTrack(music, 0);
-  }, [player]);
+    selectBackgroundTrack(music, 0);
+  }, [selectBackgroundTrack]);
 
   const handleAlbumClick = useCallback((album: Music) => {
     player.openMusic(album);
@@ -81,7 +163,7 @@ export default function App() {
         className="fixed inset-0 w-full h-full object-cover pointer-events-none"
         style={{ zIndex: 0 }}
       >
-        <source src="https://kumakiryu.github.io/musics-formikaelson/assets/iwxsbg.mp4" type="video/mp4" />
+        <source src="/bg.mp4" type="video/mp4" />
       </video>
 
       {/* Dark scrim for readability */}
@@ -125,7 +207,7 @@ export default function App() {
           onVolume={player.setVolume}
           onShuffle={player.toggleShuffle}
           onRepeat={player.cycleRepeat}
-          onSelectTrack={player.selectTrack}
+          onSelectTrack={selectBackgroundTrack}
         />
       )}
 
@@ -135,6 +217,11 @@ export default function App() {
           state={state}
           onTogglePlay={player.togglePlay}
           onNext={player.nextTrack}
+          onSeek={player.seek}
+          onVolume={player.setVolume}
+          musicLibrary={[...lib.singles, ...lib.albums]}
+          onSelectTrack={selectBackgroundTrack}
+          onAddCustomTrack={requestGlobalBackground}
           onOpenPlayer={handleReopen}
         />
       )}
@@ -142,7 +229,21 @@ export default function App() {
       {/* Password gate */}
       {authGate && (
         <PasswordModal
-          onSuccess={() => { markAuth(); setIsOwner(true); setAuthGate(null); setAddingFor(authGate); }}
+          onSuccess={() => {
+            const target = authGate;
+            markAuth();
+            setIsOwner(true);
+            setAuthGate(null);
+            if (target === "background" && pendingBackground) {
+              void saveGlobalBackground(
+                pendingBackground.music,
+                pendingBackground.trackIndex,
+              );
+              setPendingBackground(null);
+            } else if (target === "single" || target === "album") {
+              setAddingFor(target);
+            }
+          }}
           onClose={() => setAuthGate(null)}
         />
       )}

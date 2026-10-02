@@ -96,23 +96,17 @@ export default function AlbumPlayer({
 
             {/* Progress bar */}
             <div className="w-full space-y-1.5">
-              <div
-                className="relative h-1 rounded-full cursor-pointer group/bar"
-                style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
-                onClick={e => {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  onSeek(((e.clientX - rect.left) / rect.width) * 100);
-                }}
-              >
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%`, backgroundColor: music.accentColor }}
-                />
-                <div
-                  className="absolute top-1/2 w-3 h-3 rounded-full bg-white shadow opacity-0 group-hover/bar:opacity-100 transition-opacity"
-                  style={{ left: `${progress}%`, transform: "translateX(-50%) translateY(-50%)" }}
-                />
-              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="0.1"
+                value={progress}
+                onChange={e => onSeek(Number(e.target.value))}
+                aria-label="Track progress"
+                className="player-range w-full"
+                style={{ accentColor: music.accentColor }}
+              />
               <div className="flex justify-between text-[10px] font-mono text-white/30">
                 <span>{fmt(elapsed)}</span>
                 <span>{effectiveDuration ? fmt(effectiveDuration) : (track?.duration ?? "--:--")}</span>
@@ -158,19 +152,16 @@ export default function AlbumPlayer({
               >
                 {volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
               </button>
-              <div
-                className="flex-1 h-1 rounded-full cursor-pointer"
-                style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
-                onClick={e => {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  onVolume((e.clientX - rect.left) / rect.width);
-                }}
-              >
-                <div
-                  className="h-full rounded-full"
-                  style={{ width: `${volume * 100}%`, backgroundColor: "rgba(255,255,255,0.35)" }}
-                />
-              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume}
+                onChange={e => onVolume(Number(e.target.value))}
+                aria-label="Volume"
+                className="player-range flex-1"
+              />
             </div>
           </div>
 

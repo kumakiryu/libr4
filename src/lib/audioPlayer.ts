@@ -3,10 +3,16 @@
 
 import { youtubePlayer, extractYouTubeId } from "./youtubePlayer";
 
+function normalizeMediaUrl(url: string) {
+  // Pasted links are often copied with Markdown emphasis or quote characters.
+  return url.trim().replace(/^["'`*]+|["'`*]+$/g, "");
+}
+
 type Cbs = {
   onTime?: (current: number, duration: number) => void;
   onEnded?: () => void;
   onStateChange?: (playing: boolean) => void;
+  onAutoplayBlocked?: () => void;
   onError?: (msg: string) => void;
 };
 
@@ -51,8 +57,6 @@ class AudioPlayerManager {
   private _stopAudio() {
     if (this.el) {
       this.el.pause();
-      this.el.src = "";
-      this.el.load();
       this.el = null;
     }
   }
@@ -61,9 +65,22 @@ class AudioPlayerManager {
     youtubePlayer.stop();
   }
 
+  private _playAudio() {
+    if (!this.el) return;
+    this.el.play().catch((error: DOMException) => {
+      this.cbs.onStateChange?.(false);
+      if (error.name === "NotAllowedError") {
+        this.cbs.onAutoplayBlocked?.();
+      } else {
+        this.cbs.onError?.("Audio playback failed. Check the audio URL and try again.");
+      }
+    });
+  }
+
   // ── Public API ────────────────────────────────────────────────────────────
 
   loadUrl(url: string) {
+    url = normalizeMediaUrl(url);
     const ytId = extractYouTubeId(url);
     if (ytId) {
       this._stopAudio();
@@ -74,11 +91,12 @@ class AudioPlayerManager {
       this._stopAudio();
       this._mode = "audio";
       this.el = this._makeAudio(url);
-      this.el.play().catch(() => { /* autoplay blocked — user clicks play */ });
+      this._playAudio();
     }
   }
 
   cueUrl(url: string) {
+    url = normalizeMediaUrl(url);
     const ytId = extractYouTubeId(url);
     if (ytId) {
       this._stopAudio();
@@ -94,10 +112,11 @@ class AudioPlayerManager {
   }
 
   playOrLoad(url: string) {
+    url = normalizeMediaUrl(url);
     if (this._mode === "youtube") {
       youtubePlayer.play();
     } else if (this.el) {
-      this.el.play().catch(() => {});
+      this._playAudio();
     } else {
       this.loadUrl(url);
     }
@@ -105,7 +124,7 @@ class AudioPlayerManager {
 
   play() {
     if (this._mode === "youtube") youtubePlayer.play();
-    else this.el?.play().catch(() => {});
+    else this._playAudio();
   }
 
   pause() {

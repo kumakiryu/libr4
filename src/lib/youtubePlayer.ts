@@ -27,6 +27,7 @@ class YouTubePlayerManager {
   private pollId: ReturnType<typeof setInterval> | null = null;
   private pendingId: string | null = null;
   private pendingAutoplay = false;
+  private volume = 0.8;
   private readonly containerId = "yt-hidden-player";
 
   constructor() {
@@ -77,6 +78,7 @@ class YouTubePlayerManager {
       },
       events: {
         onReady: () => {
+          this.player?.setVolume?.(Math.round(this.volume * 100));
           if (this.pendingId) {
             this._doLoad(this.pendingId, this.pendingAutoplay);
             this.pendingId = null;
@@ -137,10 +139,19 @@ class YouTubePlayerManager {
     }
   }
 
-  play()             { this.player?.playVideo?.(); }
+  play() {
+    if (!this.apiReady || !this.player?.playVideo) {
+      this.pendingAutoplay = true;
+      return;
+    }
+    this.player.playVideo();
+  }
   pause()            { this.player?.pauseVideo?.(); }
   seekTo(s: number)  { this.player?.seekTo?.(s, true); }
-  setVolume(v: number) { this.player?.setVolume?.(Math.round(v * 100)); }
+  setVolume(v: number) {
+    this.volume = Math.min(1, Math.max(0, v));
+    this.player?.setVolume?.(Math.round(this.volume * 100));
+  }
 
   stop() {
     this._stopPoll();

@@ -27,9 +27,13 @@ export function useLocalMusic(baseSingles: Music[], baseAlbums: Music[]) {
 
   useEffect(() => {
     api.fetchMusic().then(({ singles, albums }) => {
-      setUserSingles(singles);
-      setUserAlbums(albums);
-      saveCache(singles, albums);
+      // Preserve cached additions if the server unexpectedly returns an empty
+      // collection after an outage or edge-function replacement.
+      const nextSingles = singles.length ? singles : singlesRef.current;
+      const nextAlbums = albums.length ? albums : albumsRef.current;
+      setUserSingles(nextSingles);
+      setUserAlbums(nextAlbums);
+      saveCache(nextSingles, nextAlbums);
     }).catch(() => {/* use cached */});
   }, []);
 

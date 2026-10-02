@@ -18,13 +18,14 @@ export type PlayerState = {
   repeat: RepeatMode;
   isOpen: boolean;
   autoplayBlocked: boolean;
+  playbackError: string | null;
 };
 
 const INITIAL: PlayerState = {
   music: null, track: null, trackIndex: 0,
   isPlaying: false, progress: 0, elapsed: 0, duration: 0,
   volume: 0.8, shuffle: false, repeat: "off",
-  isOpen: false, autoplayBlocked: false,
+  isOpen: false, autoplayBlocked: false, playbackError: null,
 };
 
 export function usePlayer() {
@@ -104,7 +105,7 @@ export function usePlayer() {
         patch({
           track: next,
           trackIndex: nextIdx,
-          isPlaying: !!next.audioUrl,
+          isPlaying: false,
           progress: 0,
           elapsed: 0,
           duration: next.durationSec || 0,
@@ -112,11 +113,18 @@ export function usePlayer() {
         if (!next.audioUrl) startSim(next.durationSec);
       },
       onStateChange(playing) {
-        patch({ isPlaying: playing, autoplayBlocked: false });
+        patch({
+          isPlaying: playing,
+          autoplayBlocked: false,
+          ...(playing ? { playbackError: null } : {}),
+        });
+      },
+      onAutoplayBlocked() {
+        patch({ isPlaying: false, autoplayBlocked: true });
       },
       onError(msg) {
         console.warn("[audioPlayer]", msg);
-        patch({ isPlaying: false, autoplayBlocked: true });
+        patch({ isPlaying: false, playbackError: msg });
       },
     });
 
@@ -138,7 +146,7 @@ export function usePlayer() {
       music, track, trackIndex: 0,
       isPlaying: false, progress: 0, elapsed: 0,
       duration: track?.durationSec ?? 0,
-      isOpen: true, autoplayBlocked: false,
+      isOpen: true, autoplayBlocked: false, playbackError: null,
     });
   }, []);
 
@@ -150,8 +158,12 @@ export function usePlayer() {
     const s = stateRef.current;
     if (s.track?.audioUrl) {
       if (s.isPlaying) audioPlayer.pause();
-      else audioPlayer.playOrLoad(s.track.audioUrl);
-      // isPlaying updated via onStateChange callback
+      else {
+        audioPlayer.playOrLoad(s.track.audioUrl);
+        // Give the control immediate feedback. A rejected play promise or media
+        // error corrects this state through the callbacks above.
+        patch({ isPlaying: true, playbackError: null });
+      }
     } else {
       // Sim mode
       if (s.isPlaying) { stopSim(); patch({ isPlaying: false }); }
@@ -159,15 +171,21 @@ export function usePlayer() {
     }
   }, []);
 
+  const retryAutoplay = useCallback(() => {
+    const s = stateRef.current;
+    if (!s.track?.audioUrl || s.isPlaying) return;
+    audioPlayer.playOrLoad(s.track.audioUrl);
+  }, []);
+
   const selectTrack = useCallback((music: Music, index: number) => {
     const track = music.tracks[index];
     doLoad(track, true);
     patch({
       music, track, trackIndex: index,
-      isPlaying: !!track.audioUrl,
+      isPlaying: false,
       progress: 0, elapsed: 0,
       duration: track.durationSec || 0,
-      autoplayBlocked: false,
+      autoplayBlocked: false, playbackError: null,
     });
     if (!track.audioUrl) startSim(track.durationSec);
   }, []);
@@ -182,7 +200,7 @@ export function usePlayer() {
       track, trackIndex: nextIdx,
       progress: 0, elapsed: 0,
       duration: track.durationSec || 0,
-      isPlaying: s.isPlaying && !!track.audioUrl,
+      isPlaying: false,
     });
     if (!track.audioUrl && s.isPlaying) startSim(track.durationSec);
   }, []);
@@ -204,7 +222,7 @@ export function usePlayer() {
       track, trackIndex: prevIdx,
       progress: 0, elapsed: 0,
       duration: track.durationSec || 0,
-      isPlaying: s.isPlaying && !!track.audioUrl,
+      isPlaying: false,
     });
     if (!track.audioUrl && s.isPlaying) startSim(track.durationSec);
   }, []);
@@ -234,5 +252,18 @@ export function usePlayer() {
     patch({ repeat: next });
   }, []);
 
-  return { state, openMusic, closePlayer, togglePlay, selectTrack, nextTrack, prevTrack, seek, setVolume, toggleShuffle, cycleRepeat };
+  return {
+    state,
+    openMusic,
+    closePlayer,
+    togglePlay,
+    retryAutoplay,
+    selectTrack,
+    nextTrack,
+    prevTrack,
+    seek,
+    setVolume,
+    toggleShuffle,
+    cycleRepeat,
+  };
 }
