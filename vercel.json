@@ -1,0 +1,22 @@
+{
+  "headers": [
+    {
+      "source": "/bg-video.asset",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "video/mp4"
+        }
+      ]
+    },
+    {
+      "source": "/crave-you-cover.asset",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "image/png"
+        }
+      ]
+    }
+  ]
+}

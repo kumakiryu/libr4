@@ -33,7 +33,7 @@ export const MUSIC_LIBRARY: Music[] = [
     id: "crave-you",
     title: "Crave You",
     artist: "LIBR4 ft. SLXME",
-    coverUrl: "/CRAVE_YOU.png",
+    coverUrl: "/crave-you-cover.asset",
     accentColor: "#c084fc",
     labelColor: "#7e22ce",
     tracks: [

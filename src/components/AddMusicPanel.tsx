@@ -104,7 +104,7 @@ export default function AddMusicPanel({ onClose, onAddSingle, onAddAlbum }: Prop
         onClick={onClose}
       />
 
-      <div className="relative glass-strong rounded-3xl w-full max-w-lg animate-scale-in overflow-hidden">
+      <div className="add-music-panel relative glass-strong rounded-3xl w-full max-w-lg animate-scale-in overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
           <span className="text-sm font-semibold text-white/80">Add Music</span>
