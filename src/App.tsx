@@ -179,8 +179,8 @@ export default function App() {
 
       {/* Dark scrim for readability */}
       <div
-        className="fixed inset-0 pointer-events-none"
-        style={{ zIndex: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.50) 50%, rgba(0,0,0,0.75) 100%)" }}
+        className="background-depth fixed inset-0 pointer-events-none"
+        style={{ zIndex: 0 }}
       />
 
       {/* Sound splash — the entry click satisfies browser audio policies. */}
